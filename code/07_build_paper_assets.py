@@ -44,7 +44,7 @@ def dataset_table():
     text = r"""\begin{table}[tb]
 \centering\small
 \caption{Fixed analysis cohorts. Ratio is minority/majority class count. Group sizes refer to the full analysis cohort, before a random split.}\label{tab:data}
-\begin{tabular}{@{}lrrp{1.6cm}p{4.2cm}@{}}
+\begin{tabular}{@{}lrrp{1.7cm}p{6.3cm}@{}}
 \toprule
 Dataset & Rows & Ratio & Audit group & Group sizes\\\midrule
 """ + "\n".join(rows) + r"""
