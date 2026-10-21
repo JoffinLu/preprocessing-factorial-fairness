@@ -4,9 +4,10 @@ title: "Interactions among Imputation, Class-Imbalance Treatment and Fairness In
 type: software
 authors:
   - family-names: Lu
-    given-names: Cen
+    given-names: Cenfa
     affiliation: "Guilin University of Electronic Technology"
     email: "joffin@163.com"
+    orcid: "https://orcid.org/0009-0003-3481-3624"
 year: 2026
 repository-code: "https://github.com/JoffinLu/preprocessing-factorial-fairness"
 license: MIT
