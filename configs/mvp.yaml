@@ -1,0 +1,48 @@
+# 冻结的实验配置（MVP：最小可行全因子设计）
+#
+# 本文件是实验参数的唯一真源。代码中不出现任何绝对路径，
+# ROOT 由 code/pipeline/config.py 里的 Path(__file__).resolve() 推导。
+#
+# 冻结设计：
+#   四因子全因子 A(3) x B(3) x C(3) x M(2) = 54 组合
+#   x 5 数据集 x 3 种子 = 810 次预处理
+#   x 2 模型 = 1,620 次训练-评估
+# 处理顺序（不得更改）：A 插补 -> B 不平衡 -> C 公平性干预。
+
+# 数据集
+datasets: [adult, german, bank, diabetes, compas]
+
+# 因子 M：缺失机制（缺失率固定 30%）
+mechanisms: [M1, M2]          # M1=MCAR, M2=MAR
+
+# 因子 A：缺失值处理
+a_levels: [A1, A2, A3]        # A1=均值插补, A2=MICE, A3=KNN
+
+# 因子 B：类别不平衡处理
+b_levels: [B1, B2, B3]        # B1=无处理, B2=类别权重, B3=SMOTE
+
+# 因子 C：公平性预处理干预
+c_levels: [C1, C2, C3]        # C1=无干预, C2=Reweighing, C3=DIR
+
+# 模型与随机种子
+models: [LR, LGBM]
+seeds: [0, 1, 2]
+
+# 数值参数
+missing_rate: 0.30            # 统一注入缺失率
+test_size: 0.30               # 分层 7:3 划分
+random_state: 42              # 与划分无关的兜底随机性
+
+# 分类列缺失处理：as_category（缺失自成一类，默认）或 mode（众数填充）
+categorical_missing: "as_category"
+
+# 分类列按训练集频次保留的最大取值数（Gate 2b）
+#   截断时其余取值并入 __OTHER__。Diabetes 的 diag_1/2/3 是 ICD-9 原始码，
+#   单列 700+ 水平；不截断时 one-hot 后 2,343 列，MICE/KNN 不可行。
+max_cardinality: 20
+
+# True 时跳过「天然缺失置零」步骤（仅稳健性对照用，主实验保持 false）
+use_natural_missing: false
+
+# 输出
+out_csv: "results/full_results.csv"

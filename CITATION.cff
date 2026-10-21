@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this package, please cite the accompanying manuscript."
+title: "Preprocessing Factorial Fairness: replication package"
+type: software
+authors:
+  - family-names: Lu
+    given-names: Cen
+    affiliation: "Guilin University of Electronic Technology"
+    email: "joffin@163.com"
+year: 2026
+repository-code: "https://github.com/JoffinLu/preprocessing-factorial-fairness"
+license: MIT
+keywords:
+  - fairness in machine learning
+  - missing data imputation
+  - class imbalance
+  - preprocessing pipelines
+  - factorial design
+  - reproducibility

@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# 第三方原始数据（公开源，可随时重新下载，不纳入版本库）
+data/raw/
+
+# 临时产物
+*.tmp
+*.log
+.DS_Store
+.Rhistory

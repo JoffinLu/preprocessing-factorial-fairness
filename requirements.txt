@@ -1,0 +1,27 @@
+﻿# 运行本实验所需的直接依赖（不含开发期附件，如 jupyter / torch）
+# 完整开发环境快照见 environment/requirements-dev-freeze.txt
+# 复现环境：Python 3.13.15（与开发环境一致）
+
+# --- 数值与数据框 ---
+numpy==2.2.4
+pandas==3.0.6
+scipy==1.18.1
+
+# --- 建模 ---
+scikit-learn==1.9.1
+lightgbm==4.7.0
+imbalanced-learn==0.14.2
+
+# --- 公平性 ---
+# DisparateImpactRemover 依赖 BlackBoxAuditing（aif360 的 extra，需显式安装）
+aif360==0.6.1
+BlackBoxAuditing==0.1.54
+fairlearn==0.15.0
+
+# --- 统计推断 ---
+statsmodels==0.15.0
+
+# --- 配置、下载与绘图 ---
+PyYAML==6.0.2
+requests==2.32.3
+matplotlib==3.11.2
