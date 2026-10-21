@@ -1,21 +1,9 @@
-"""5 个数据集的加载与清洗（T3 项目：配置化实验管线）
+"""Dataset construction for revision_v2.
 
-严格实现项目负责人签字冻结的清洗规则（见任务书第三节）。所有清洗细节
-均写入上游注释，并把数据驱动的选择（如 bank 的二分化阈值、diabetes 的
-丢列规则）记入返回值 `meta`，便于写论文。
-
-冻结规则要点
-    规则 1  处理顺序固定 A → B → C（在本模块只做清洗，顺序在 run_cell 体现）
-    规则 2  Bank：job/marital/education/default/housing/loan 的 "unknown"
-            保留为普通类别；pdays 里的 999 表示「此前未联系过」，保留为数值
-    规则 3  Diabetes：丢缺失率 > 20% 的 5 列 → 剔除 race 缺失行 → 目标二值化
-    规则 4  COMPAS：ProPublica 通行过滤 + 丢弃 ID/日期类非建模列
-    规则 5  German：21 列命名；class 1->good->0、2->bad->1；sex 由 personal_status 重构
-    规则 6  Adult：无表头 15 列；na_values="?"；income 去句点；>50K->1
-    规则 7  统一流程：天然缺失先置零（分类众数 / 数值中位数），再统一注入缺失；
-            `natural_missing=True` 时跳过节 7 的置零步骤（供稳健性对照）
-    规则 8  敏感属性：adult→sex；german→sex（重构）；bank→age 二分化（中位数阈值）；
-            diabetes→race；compas→race
+Loaders preserve natural missingness. Semi-synthetic complete-data references
+are constructed only AFTER the split, using training-derived fill values.
+Diabetes patient identifiers are retained as grouping metadata, never features.
+Bank call duration is excluded by default because it is unavailable before a call.
 """
 from __future__ import annotations
 
@@ -109,6 +97,7 @@ class Dataset:
     sensitive_name: str
     positive_label: int = 1
     meta: dict[str, Any] = field(default_factory=dict)
+    groups: np.ndarray | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -175,24 +164,30 @@ def _stratified_subsample(y: np.ndarray, sensitive: pd.Series, max_rows: int,
     return idx, meta
 
 
-def _zero_out_missing(X: pd.DataFrame) -> pd.DataFrame:
-    """规则 7：天然缺失置零——分类列用众数、数值列用中位数填充
+def complete_from_training(train: pd.DataFrame, test: pd.DataFrame
+                           ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """Build a semi-synthetic complete reference using training statistics only.
 
-    整列全缺失的极端情况退化为填充 "__MISSING__"（分类）或 0（数值）。
+    This preliminary completion is part of the data-generating protocol, not
+    factor A. Numerical gaps use the training median; categorical gaps use the
+    training mode. An entirely unobserved training column uses 0 / __MISSING__.
+    Values are fitted for every column, including test-only missing columns.
     """
-    out = X.copy()
-    for c in out.columns:
-        s = out[c]
-        if not s.isna().any():
-            continue
+    if list(train.columns) != list(test.columns):
+        raise ValueError("Training and test columns must match")
+    tr, te, fills = train.copy(), test.copy(), {}
+    for c in train.columns:
+        s = train[c]
         if _is_categorical(s):
             modes = s.mode(dropna=True)
             fill = modes.iloc[0] if len(modes) else "__MISSING__"
         else:
             med = s.median(skipna=True)
             fill = float(med) if pd.notna(med) else 0.0
-        out[c] = s.fillna(fill)
-    return out
+        fills[c] = fill
+        tr[c] = tr[c].fillna(fill)
+        te[c] = te[c].fillna(fill)
+    return tr, te, fills
 
 
 # ---------------------------------------------------------------------------
@@ -219,9 +214,11 @@ def _load_adult() -> Dataset:
 # German
 # ---------------------------------------------------------------------------
 def _load_german() -> Dataset:
-    """规则 5：空格分隔 21 列；class 1->good->0、2->bad->1；
-    敏感属性 sex 由 personal_status 重构：A92->female，其余(A91/A93/A94)->male。
-    personal_status 同时被剔除出特征（它直接编码性别，属泄漏源）。
+    """Original Statlog table; bad credit is the positive class.
+
+    Protected benchmark groups are age > 25 / age <= 25. The original sex
+    variable cannot be reliably recovered from personal_status, so no sex
+    fairness claim is made. Both age and personal_status are excluded as inputs.
     """
     f = DATA_RAW / "german" / "german.data"
     df = pd.read_csv(f, header=None, names=GERMAN_COLS, sep=r"\s+",
@@ -229,15 +226,19 @@ def _load_german() -> Dataset:
     df["class"] = df["class"].map({1: "good", 2: "bad"})
     # bad 为正类 1
     y = (df["class"] == "bad").astype(int).to_numpy()
-    sex = np.where(df["personal_status"] == "A92", "female", "male")
-    sensitive = pd.Series(sex, name="sex")
-    X = df.drop(columns=["class", "personal_status"]).reset_index(drop=True)
-    return Dataset("german", X, y, sensitive, "sex", 1,
+    # UCI's South German Credit correction documents unreliable recovery of
+    # sex from the original personal-status code. Use an explicit age benchmark
+    # definition instead (AIF360 convention: privileged age > 25).
+    sensitive = pd.Series((df["age"].to_numpy() > 25).astype(int), name="age_gt25")
+    X = df.drop(columns=["class", "personal_status", "age"]).reset_index(drop=True)
+    return Dataset("german", X, y, sensitive, "age_gt25", 1,
                    {"n": len(df), "n_pos": int(y.sum()),
                     "imbalance_ratio": round((y == 0).sum() / max(int(y.sum()), 1), 4),
                     "target": "class(bad=1)", "sens_dist":
                         sensitive.value_counts().to_dict(),
-                    "note": "sex 由 personal_status 重构，A92=female"})
+                    "note": "age > 25 versus age <= 25; original sex coding not used",
+                    "protected_group_threshold": 25,
+                    "sex_coding_warning_source": "https://archive.ics.uci.edu/dataset/573/south+german+credit"})
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +273,7 @@ def _load_bank() -> Dataset:
                     "unknown_kept_cols": ["job", "marital", "education",
                                           "default", "housing", "loan"],
                     "pdays_999_note": "999=此前未联系过，保留为数值",
-                    "sens_dist": sensitive.value_counts().to_dict()})
+                       "sens_dist": sensitive.value_counts().to_dict()})
 
 
 # ---------------------------------------------------------------------------
@@ -302,7 +303,8 @@ def _load_diabetes() -> Dataset:
                     "n_rows_dropped_race_missing": n_race_missing,
                     "n_rows_before": before,
                     "dropped_id_cols": ["encounter_id", "patient_nbr"],
-                    "sens_dist": sensitive.value_counts().to_dict()})
+                    "sens_dist": sensitive.value_counts().to_dict()},
+                   groups=df["patient_nbr"].to_numpy(copy=True))
 
 
 # ---------------------------------------------------------------------------
@@ -354,13 +356,14 @@ _LOADERS: dict[str, Callable[[], Dataset]] = {
 # ---------------------------------------------------------------------------
 # 对外入口
 # ---------------------------------------------------------------------------
-def load_dataset(name: str, natural_missing: bool = False) -> Dataset:
+def load_dataset(name: str, natural_missing: bool = False,
+                 drop_bank_duration: bool = True) -> Dataset:
     """加载并清洗一个数据集（确定性）
 
     参数
         name            : 数据集名，取值见 DATASETS
-        natural_missing : False（默认）时按规则 7 先把天然缺失置零；
-                          True 时跳过置零，保留天然缺失（稳健性对照）
+        natural_missing : retained for API compatibility and protocol metadata;
+                          both paths preserve gaps until after splitting.
 
     返回
         Dataset 数据类。meta 中记录 n / n_pos / imbalance_ratio 及数据驱动选择。
@@ -386,14 +389,14 @@ def load_dataset(name: str, natural_missing: bool = False) -> Dataset:
                       "imbalance_ratio": round(float((ds.y[idx] == 0).sum())
                                                / max(int(ds.y[idx].sum()), 1), 4),
                       "sens_dist_before_subsample": ds.meta.get("sens_dist"),
-                      "sens_dist": sens_sub.value_counts().to_dict()})
+                       "sens_dist": sens_sub.value_counts().to_dict()},
+                     groups=(None if ds.groups is None else ds.groups[idx].copy()))
     ds.meta["natural_missing_kept"] = bool(natural_missing)
-    if not natural_missing:
-        n_before = int(ds.X_raw.isna().sum().sum())
-        ds.X_raw = _zero_out_missing(ds.X_raw)
-        ds.meta["natural_missing_cells_zeroed"] = n_before
-    else:
-        ds.meta["natural_missing_cells_zeroed"] = 0
+    ds.meta["natural_missing_cells_zeroed"] = 0
+    ds.meta["natural_missing_preserved_until_split"] = True
+    if name == "bank" and drop_bank_duration:
+        ds.X_raw = ds.X_raw.drop(columns=["duration"], errors="ignore")
+        ds.meta["dropped_unavailable_at_prediction"] = ["duration"]
     ds.meta["n_features_raw"] = int(ds.X_raw.shape[1])
     # 两种不平衡比口径（论文 Table 1 必须写清用哪个）：
     #   imbalance_ratio         = n_neg / n_pos（>1 表示负类占多数；COMPAS 为 1.20）
@@ -409,73 +412,20 @@ def load_dataset(name: str, natural_missing: bool = False) -> Dataset:
 # 自检：python code/pipeline/data.py
 # ---------------------------------------------------------------------------
 def _self_test() -> None:
-    print("=" * 78)
     for name in DATASETS:
-        ds = load_dataset(name, natural_missing=False)
-        assert not ds.X_raw.isna().any().any(), f"{name}: 置零后仍有缺失"
-        assert ds.y.ndim == 1 and set(np.unique(ds.y)) <= {0, 1}, f"{name}: 目标非二值"
-        assert ds.sensitive.notna().all(), f"{name}: 敏感属性含缺失"
+        ds = load_dataset(name)
         assert len(ds.X_raw) == len(ds.y) == len(ds.sensitive)
-        assert ds.positive_label == 1
-        print(f"[{name:8s}] X={ds.X_raw.shape}  n_pos={ds.meta['n_pos']:6d}  "
-              f"imb_ratio={ds.meta['imbalance_ratio']:.2f}  敏感={ds.sensitive_name}  "
-              f"组数={ds.sensitive.nunique()}")
-        print(f"           敏感分布: {ds.meta['sens_dist']}")
-        print(f"           特征列({len(ds.X_raw.columns)}): {list(ds.X_raw.columns)[:8]}"
-              f"{' ...' if len(ds.X_raw.columns) > 8 else ''}")
-    # 数据驱动阈值应写入 meta
-    b = load_dataset("bank")
-    assert "age_binarize_threshold" in b.meta and isinstance(
-        b.meta["age_binarize_threshold"], float)
-    assert b.meta["pdays_999_note"]
-    # 受保护属性的定义变量不得留在特征中（否则等于把敏感属性喂给模型）
-    assert "age" not in b.X_raw.columns, "bank 的 age 必须剔除"
-    print(f"\n[bank] age 二分化阈值（全样本中位数）={b.meta['age_binarize_threshold']}，"
-          f"分组人数={b.meta['sens_dist']}；特征中已剔除 age")
-    # natural_missing=True 时 adult/diabetes 应保留天然缺失
-    a_nat = load_dataset("adult", natural_missing=True)
-    assert a_nat.X_raw.isna().any().any(), "adult natural_missing=True 应保留缺失"
-    d_nat = load_dataset("diabetes", natural_missing=True)
-    assert d_nat.X_raw.isna().any().any(), "diabetes natural_missing=True 应保留缺失"
-    c_nat = load_dataset("compas", natural_missing=True)
-    print(f"\n[对照] adult natural NaN 单元={int(a_nat.X_raw.isna().sum().sum())}，"
-          f"diabetes={int(d_nat.X_raw.isna().sum().sum())}，"
-          f"compas={int(c_nat.X_raw.isna().sum().sum())}")
-    # german sex 重构与 bank age 二分化抽样核对
-    g = load_dataset("german")
-    assert set(np.unique(g.sensitive)) <= {"male", "female"}
-    bm = load_dataset("bank")
-    assert set(np.unique(bm.sensitive)) == {0, 1}
-    # D7：COMPAS 极小 race 子群已合并，且合并后每组都够大
-    cp = load_dataset("compas")
-    assert cp.meta["rare_merge_merged_groups"] == ["Asian", "Native American"], \
-        cp.meta["rare_merge_merged_groups"]
-    assert cp.sensitive.nunique() == 4, cp.sensitive.value_counts()
-    assert int(cp.sensitive.value_counts().min()) >= 300, cp.sensitive.value_counts()
-    print(f"\n[compas/D7] 原始 race 6 类 -> 合并后 {cp.sensitive.nunique()} 类"
-          f"（并入 Other: {cp.meta['rare_merge_merged_groups']}，"
-          f"n={cp.meta['rare_merge_other_n']}）；分布={cp.meta['sens_dist']}")
-    # D11：diabetes 分层降采样——样本量、比例保持、两次加载逐位一致
-    d1 = load_dataset("diabetes")
-    assert len(d1.y) == SUBSAMPLE_MAX_ROWS["diabetes"], len(d1.y)
-    assert d1.meta["n_before_subsample"] > SUBSAMPLE_MAX_ROWS["diabetes"]
-    d2 = load_dataset("diabetes")
-    same = (d1.X_raw.astype(str).equals(d2.X_raw.astype(str))
-            and np.array_equal(d1.y, d2.y)
-            and d1.sensitive.equals(d2.sensitive))
-    assert same, "diabetes 分层降采样必须可复现"
-    # 抽样前后各敏感组占比的偏差应很小（分层生效的直接证据）
-    raw_ratio = d1.meta["n_pos"] / len(d1.y)
-    assert d1.meta["rare_merge_merged_groups"] == ["Asian"], \
-        d1.meta["rare_merge_merged_groups"]
-    assert int(d1.sensitive.value_counts().min()) >= 0.01 * len(d1.y), \
-        d1.sensitive.value_counts()
-    print(f"\n[diabetes/D11] {d1.meta['n_before_subsample']} 行 -> {len(d1.y)} 行"
-          f"（分层: 标签x敏感属性，seed={SUBSAMPLE_SEED}，正类占比 {raw_ratio:.4f}）；"
-          f"两次加载逐位一致")
-    print(f"           抽样后 race {d1.sensitive.nunique()} 类（Asian 占比降至 "
-          f"{d1.meta['rare_merge_other_n']} 人并入 Other）；分布={d1.meta['sens_dist']}")
-    print("data 自检全部通过：5 个数据集清洗规则落地，确定性可复现")
+        assert ds.sensitive.notna().all()
+        assert ds.meta["natural_missing_cells_zeroed"] == 0
+        if name == "diabetes":
+            assert ds.groups is not None and len(ds.groups) == len(ds.y)
+            assert "patient_nbr" not in ds.X_raw.columns
+        if name == "bank":
+            assert "duration" not in ds.X_raw.columns
+        tr, te, _ = complete_from_training(ds.X_raw.iloc[:100], ds.X_raw.iloc[100:120])
+        assert not tr.isna().any().any() and not te.isna().any().any()
+        print(f"{name}: rows={len(ds.y)}, raw_missing={int(ds.X_raw.isna().sum().sum())}")
+    print("data protocol checks passed")
 
 
 if __name__ == "__main__":

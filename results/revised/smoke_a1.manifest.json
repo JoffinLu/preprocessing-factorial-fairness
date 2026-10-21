@@ -1,0 +1,93 @@
+{
+  "config": {
+    "datasets": [
+      "adult",
+      "german",
+      "bank",
+      "diabetes",
+      "compas"
+    ],
+    "mechanisms": [
+      "M1",
+      "M2"
+    ],
+    "a_levels": [
+      "A1"
+    ],
+    "b_levels": [
+      "B1",
+      "B2",
+      "B3"
+    ],
+    "c_levels": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "models": [
+      "LR",
+      "LGBM"
+    ],
+    "seeds": [
+      0
+    ],
+    "missing_rate": 0.3,
+    "test_size": 0.3,
+    "random_state": 42,
+    "categorical_missing": "as_category",
+    "max_cardinality": 20,
+    "use_natural_missing": false,
+    "out_csv": "results/revised/smoke_a1.csv",
+    "protocol_version": "revision_v2",
+    "resample_variant": "within_group_smote",
+    "repair_variant": "train_quantile",
+    "repair_numeric_only": true,
+    "drop_bank_duration": true
+  },
+  "source_sha256": {
+    "code/05_run_revision.py": "8e4aa35d4719a2d3f399a9af191dba729c9fc3c6367291ab29706320d8d726b5",
+    "code/pipeline/__init__.py": "5f70305991cdfb530154681e9dbe10f3f45c6fa9a0c4f8d2a914d07eb50f3029",
+    "code/pipeline/config.py": "c4bbac40a68d263b87229dd35a25f6c090c521a2fbbff391e160a2e0b484f447",
+    "code/pipeline/data.py": "3225387dad4d20d16764b7b4f0d246fba122e4b6b6b09bff8920b2c854a0c43d",
+    "code/pipeline/features.py": "18339327f3a7261028b9d2d09bbf723d1dc064791b1404432a106269a2eb34cc",
+    "code/pipeline/imbalance.py": "e5ba07853eda310bbdb37faa24c6a1ac5bb5f77cd0a7dd70e9df19a0079c92f6",
+    "code/pipeline/impute.py": "9e592c5cd76b036aa5965d00dffe17fe3993ce761ed128764c52230bf6804906",
+    "code/pipeline/intervention.py": "a3ee6d082a7f47df0078bad044ed79499d88e4eb5db27a87052c4fb0f0f256c2",
+    "code/pipeline/metrics.py": "145f890353aa6d94582a1494b82d1a300dde2be34cd5d08fffb2ae2006f19652",
+    "code/pipeline/missing.py": "7f5430159b94f4a4c9e633d93a6209b5d8fa531228afbddf81c34cf620d23759",
+    "code/pipeline/model.py": "46d04146a94921fa592c693e029e24dd39e9ef6ef3fcb3c74b79f527046472ba",
+    "code/pipeline/run_cell.py": "54daaf8ac925f1d365d6837bc5599013262ad405daa90e7b8f755d49dcbc9a9a"
+  },
+  "natural_missing": false,
+  "started_utc": "2026-10-21T08:01:30.586155+00:00",
+  "python": "3.13.15 (tags/v3.13.15:4061bc4, Aug  5 2026, 13:05:39) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "logical_cpus": 16,
+  "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+  "jobs": 4,
+  "command": [
+    "code/05_run_revision.py",
+    "--datasets",
+    "adult",
+    "german",
+    "bank",
+    "diabetes",
+    "compas",
+    "--a",
+    "A1",
+    "--seeds",
+    "0",
+    "--jobs",
+    "4",
+    "--out",
+    "results/revised/smoke_a1.csv"
+  ],
+  "expected_rows": 180,
+  "wall_time_seconds": 57.91706439999689,
+  "status": "complete",
+  "finished_utc": "2026-10-21T08:02:28.534697+00:00",
+  "rows": 180,
+  "successful_rows": 180,
+  "failed_rows": 0,
+  "output_sha256": "3895659aa239f6a420061bc0e5f75148427222034b2f92fa69f2757cf7c8727e"
+}

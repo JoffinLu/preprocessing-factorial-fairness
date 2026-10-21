@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import sys
+import json
 from pathlib import Path
 
 import numpy as np
@@ -28,7 +29,7 @@ if str(_CODE_DIR) not in sys.path:
 from fairness_metrics import fairness_report, group_rates  # noqa: E402
 
 METRIC_COLS: tuple[str, ...] = (
-    "AUC", "F1", "accuracy", "balanced_accuracy", "precision", "recall",
+    "AUC", "AP", "F1", "accuracy", "balanced_accuracy", "precision", "recall",
     "specificity", "n_test", "n_pos_true", "n_neg_true", "n_pred_pos",
     "DP", "EO", "EOdd", "TPR_gap", "DI",
     "n_groups", "undefined_tpr_groups", "undefined_sel_groups",
@@ -78,17 +79,19 @@ def evaluate(y_true, y_pred, y_prob, sensitive, dataset: str = "",
 
     # AUC：测试集只有一个真实类别时无定义
     if n_pos > 0 and n_neg > 0:
-        from sklearn.metrics import roc_auc_score
+        from sklearn.metrics import roc_auc_score, average_precision_score
         auc = float(roc_auc_score(y_true, y_prob))
+        ap = float(average_precision_score(y_true, y_prob))
     else:
         auc = np.nan
+        ap = np.nan
 
     fair = fairness_report(y_true, y_pred, sensitive, model_name=model,
                            dataset=dataset)
     out = {
         "n_test": int(len(y_true)), "n_pos_true": n_pos, "n_neg_true": n_neg,
         "n_pred_pos": int(tp + fp),
-        "AUC": auc, "F1": float(f1), "accuracy": float(accuracy),
+        "AUC": auc, "AP": ap, "F1": float(f1), "accuracy": float(accuracy),
         "balanced_accuracy": (float(balanced_accuracy)
                               if np.isfinite(balanced_accuracy) else np.nan),
         "precision": float(precision) if np.isfinite(precision) else np.nan,
@@ -102,6 +105,31 @@ def evaluate(y_true, y_pred, y_prob, sensitive, dataset: str = "",
         "min_group_n": fair["min_group_n"],
         "min_group_n_pos": fair["min_group_n_pos"],
     }
+    # Fixed threshold diagnostics, without selecting a threshold on test labels.
+    # These are exploratory outcomes, separate from the primary 0.5 analysis.
+    masks = [sensitive == g for g in np.unique(sensitive)]
+    for threshold in (0.20, 0.35, 0.65, 0.80):
+        labels = (y_prob >= threshold).astype(int)
+        suffix = f"t{round(threshold * 100):03d}"
+        n_prediction = int(labels.sum())
+        hits = int(((y_true == 1) & (labels == 1)).sum())
+        out[f"F1_{suffix}"] = 2 * hits / (n_pos + n_prediction) if n_pos + n_prediction else 0.0
+        out[f"n_pred_pos_{suffix}"] = n_prediction
+        selection, true_positive, false_positive = [], [], []
+        for group in masks:
+            selection.append(float(labels[group].mean()))
+            positives = group & (y_true == 1)
+            negatives = group & (y_true == 0)
+            true_positive.append(float(labels[positives].mean()) if positives.any() else np.nan)
+            false_positive.append(float(labels[negatives].mean()) if negatives.any() else np.nan)
+        def span(values):
+            valid = np.asarray(values)[np.isfinite(values)]
+            return float(valid.max() - valid.min()) if len(valid) >= 2 else np.nan
+        out[f"DP_{suffix}"] = span(selection)
+        out[f"EO_{suffix}"] = span(true_positive)
+        gaps = np.array([span(true_positive), span(false_positive)])
+        out[f"EOdd_{suffix}"] = float(np.nanmax(gaps)) if np.isfinite(gaps).any() else np.nan
+    out["group_rates_json"] = json.dumps(group_rates(y_true, y_pred, sensitive).to_dict(orient="records"), default=str)
     out.update(meta)
     return out
 

@@ -1,65 +1,82 @@
-# 一键复现：环境自检 -> 数据下载/审计 -> 管线自检 -> 主实验 -> 统计 -> 可复现性比对
-#
-# 用法
-#   .\reproduce.ps1                  # 全流程（主实验会按已有结果断点续跑）
-#   .\reproduce.ps1 -Jobs 6          # 指定并行进程数
-#   .\reproduce.ps1 -SkipRun         # 只做环境自检 + 统计 + 可复现性比对
-#   .\reproduce.ps1 -Quick           # 冒烟：每数据集只跑 2 个预处理单元
-#
-# 前置
-#   Python 3.13 + pip install -r requirements.txt
-#   （干净环境验证：python -m venv .venv-clean; .venv-clean\Scripts\pip install -r requirements.txt）
+﻿# Revision-v2 reproduction. Each result CSV has a matching provenance manifest.
+# Full: .\reproduce.ps1 -Jobs 4
+# Audit existing completed main results: .\reproduce.ps1 -SkipRun
+# Independent small smoke grid, without full statistical analysis: .\reproduce.ps1 -Quick
+# Use an isolated environment: .\reproduce.ps1 -Python C:\path\to\venv\Scripts\python.exe
 param(
-    [int]$Jobs = 4,
+    [ValidateRange(1, 64)][int]$Jobs = 4,
     [switch]$SkipRun,
     [switch]$Quick,
-    [string]$Python = ""
+    [string]$Python = "",
+    [string]$ConfigPath = "configs/mvp.yaml",
+    [string]$QuickOutput = "results/revised/quick.csv"
 )
 
 $ErrorActionPreference = "Stop"
-$Root = $PSScriptRoot
+$RevisionRoot = $PSScriptRoot
 if (-not $Python) {
-    $candidates = @("$Root\.venv\Scripts\python.exe", "python")
-    foreach ($c in $candidates) {
-        if ($c -eq "python" -or (Test-Path $c)) { $Python = $c; break }
-    }
+    $LocalPython = Join-Path $RevisionRoot ".venv/Scripts/python.exe"
+    $Python = if (Test-Path -LiteralPath $LocalPython) { $LocalPython } else { "python" }
 }
 $env:PYTHONIOENCODING = "utf-8"
-function Step($name, $script, $extra) {
-    Write-Host "`n=== $name ===" -ForegroundColor Cyan
-    $argv = @("$Root\code\$script") + $extra
-    & $Python @argv
-    if ($LASTEXITCODE -ne 0) { throw "$name 失败（退出码 $LASTEXITCODE）" }
+foreach ($ThreadOption in @("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS")) {
+    [Environment]::SetEnvironmentVariable($ThreadOption, "1", "Process")
 }
 
-Step "1/6 依赖与关键算法自检" "00_verify_deps.py" @()
-Step "2/6 数据下载与审计" "01_download_and_audit.py" @()
-
-Write-Host "`n=== 3/6 管线模块自检 ===" -ForegroundColor Cyan
-foreach ($m in @("config", "data", "missing", "features", "impute", "imbalance",
-                 "intervention", "model", "metrics", "run_cell")) {
-    & $Python "$Root\code\pipeline\$m.py" | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "pipeline/$m.py 自检失败" }
+function Invoke-RevisionPython([string]$Description, [string[]]$Arguments) {
+    Write-Host $Description -ForegroundColor Cyan
+    & $Python @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "$Description failed (exit $LASTEXITCODE)" }
 }
-Write-Host "10 个模块自检全部通过"
 
-if (-not $SkipRun) {
-    $extra = @("--jobs", "$Jobs", "--out", "results/full_results.csv", "--resume")
-    if ($Quick) { $extra += @("--limit", "2") }
-    Step "4/6 主实验" "02_run_experiment.py" $extra
-    if (-not $Quick) {
-        Step "4b/6 自然缺失稳健性对照（adult × NAT）" "02_run_experiment.py" @(
-            "--datasets", "adult", "--mechanisms", "NAT", "--natural-missing",
-            "--jobs", "$Jobs", "--out", "results/nat_results.csv", "--resume")
+Push-Location -LiteralPath $RevisionRoot
+try {
+    $RawFiles = @("adult/adult.data", "german/german.data", "bank/bank-additional-full.csv",
+                  "diabetes/diabetic_data.csv", "compas/compas-scores-two-years.csv")
+    $MissingRaw = @($RawFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path "data/raw" $_)) })
+    if ($MissingRaw.Count) {
+        Invoke-RevisionPython "Download and audit public source data" @("code/01_download_and_audit.py")
     }
-} else {
-    Write-Host "`n=== 4/6 主实验：已跳过（-SkipRun）===" -ForegroundColor Yellow
+    Invoke-RevisionPython "Run protocol and inference regression checks" @("-m", "unittest", "discover", "-s", "code/tests", "-v")
+
+    if ($Quick) {
+        $ResultPath = $QuickOutput
+        if (-not $SkipRun) {
+            Invoke-RevisionPython "Run independent smoke grid" @(
+                "code/05_run_revision.py", "--config", $ConfigPath,
+                "--datasets", "german", "--mechanisms", "M1", "M2", "--a", "A1",
+                "--b", "B1", "B3", "--c", "C1", "C2", "C3", "--seeds", "0",
+                "--models", "LR", "LGBM", "--jobs", [string]$Jobs,
+                "--out", $ResultPath, "--resume")
+        }
+        Invoke-RevisionPython "Check smoke provenance and replay two smoke treatments" @(
+            "code/06_verify_revision.py", "--csv", $ResultPath, "--n", "2",
+            "--report", "revision/reproduction_quick.json")
+        Write-Host "Smoke completed. Full paired statistics were intentionally not run." -ForegroundColor Green
+    }
+    else {
+        $ResultPath = "results/revised/main.csv"
+        if (-not $SkipRun) {
+            Invoke-RevisionPython "Run or resume the complete revised factorial" @(
+                "code/05_run_revision.py", "--config", $ConfigPath,
+                "--jobs", [string]$Jobs, "--out", $ResultPath, "--resume")
+        }
+        $ManifestPath = [IO.Path]::ChangeExtension($ResultPath, ".manifest.json")
+        $ArchiveManifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+        if ($ArchiveManifest.status -ne "complete") {
+            throw "Paired analysis requires a complete main manifest; current status is $($ArchiveManifest.status)"
+        }
+        $SeedCount = @($ArchiveManifest.config.seeds).Count
+        Invoke-RevisionPython "Recompute paired contrasts and descriptive decompositions" @(
+            "code/03_statistical_analysis.py", "--input", $ResultPath,
+            "--out-dir", "results/revised/stats", "--expected-seeds", [string]$SeedCount,
+            "--bootstrap", "5000")
+        Invoke-RevisionPython "Verify completed provenance and replay ten representative treatments" @(
+            "code/06_verify_revision.py", "--csv", $ResultPath, "--n", "10",
+            "--report", "revision/reproduction_check.json")
+        Write-Host "Completed main reproduction, paired analysis and sampled replay." -ForegroundColor Green
+    }
 }
-
-Step "5/6 统计分析" "03_statistical_analysis.py" @()
-Step "6/6 可复现性比对" "04_verify_reproducibility.py" @("--n", "10")
-
-Write-Host "`n全部完成。产出：" -ForegroundColor Green
-Write-Host "  results/full_results.csv      主设计 1,620 行"
-Write-Host "  results/nat_results.csv       稳健性 162 行"
-Write-Host "  results/stats/*.csv           5 张统计表"
+finally {
+    Pop-Location
+}

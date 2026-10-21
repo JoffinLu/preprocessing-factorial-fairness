@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "input": "D:\\Desktop\\Data\\学习类\\硕士研究生\\文献阅读\\J01——Paper\\T3-预处理管线公平性\\results\\revised\\validation30.csv",
+  "inference_target": "fixed_dataset_expectation_over_joint_seed_randomisation",
+  "target_description": "Expected run metric over split/mask/algorithm randomisation, conditional on fixed datasets and the finite grid; metrics are averaged after evaluation, not computed from pooled predictions.",
+  "sampling_unit": "complete joint seed block",
+  "n_rows": 2700,
+  "n_seed_blocks": 5,
+  "seeds": [
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "n_dataset_model_pairs": 10,
+  "excluded_natural_missing_rows": 0,
+  "allow_partial_grid": false,
+  "primary_metrics": [
+    "DP",
+    "EO",
+    "EOdd"
+  ],
+  "secondary_metrics": [
+    "AUC",
+    "F1"
+  ],
+  "excluded_redundant_metric": "TPR_gap equals EO and is not analysed twice",
+  "primary_family": "primary_BC_fairness",
+  "primary_family_n_tests": 120,
+  "primary_family_definition": "all estimable four reference-coded B:C DID marginal over M/A across included dataset/model and DP/EO/EOdd",
+  "multiplicity_families": {
+    "exploratory_BC_mechanism_moderation_fairness": 120,
+    "exploratory_BC_mechanism_moderation_performance": 80,
+    "exploratory_BC_performance": 80,
+    "exploratory_BC_stratified_fairness": 240,
+    "exploratory_BC_stratified_performance": 160,
+    "exploratory_C_simple_effect_fairness": 540,
+    "exploratory_C_simple_effect_performance": 360,
+    "exploratory_M_main_contrast_fairness": 30,
+    "exploratory_M_main_contrast_performance": 20,
+    "primary_BC_fairness": 120
+  },
+  "multiplicity": "BH within declared cross-dataset/model/metric families; BY sensitivity q_by; skipped tests remain counted in family size",
+  "alpha": 0.05,
+  "intervals": "pointwise t approximation and seed-block percentile bootstrap",
+  "bootstrap_runs": 2000,
+  "bootstrap_seed": 20261021,
+  "bootstrap_joint": "one common seed-index matrix across every metric and contrast",
+  "bootstrap_sign_fraction": "fraction with observed estimate sign; stability, not probability of truth",
+  "descriptive_SS": "orthogonal observed-run SS; eta2_total includes seed variation; eta2_design uses treatment means only; no partial omega2",
+  "secondary_omnibus": "Hotelling T2 on main/two-way vectors, independent multivariate-normal blocks assumed; dimension>=n or deficient covariance causes skip",
+  "limitations": [
+    "Overlapping splits create no new independent patients.",
+    "No population-level or causal generalisation.",
+    "Fewer than 20 blocks are flagged as limited replication.",
+    "Pointwise intervals are not simultaneous.",
+    "Previously inspected results preclude a preregistered confirmatory label.",
+    "No absence of higher-order interactions is inferred."
+  ]
+}

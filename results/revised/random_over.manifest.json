@@ -1,0 +1,116 @@
+{
+  "config": {
+    "datasets": [
+      "adult",
+      "german",
+      "bank",
+      "diabetes",
+      "compas"
+    ],
+    "mechanisms": [
+      "M1",
+      "M2"
+    ],
+    "a_levels": [
+      "A1"
+    ],
+    "b_levels": [
+      "B1",
+      "B2",
+      "B3"
+    ],
+    "c_levels": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "models": [
+      "LR",
+      "LGBM"
+    ],
+    "seeds": [
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "missing_rate": 0.3,
+    "test_size": 0.3,
+    "random_state": 42,
+    "categorical_missing": "as_category",
+    "max_cardinality": 20,
+    "use_natural_missing": false,
+    "out_csv": "results/revised/random_over.csv",
+    "protocol_version": "revision_v2",
+    "resample_variant": "random_over",
+    "repair_variant": "train_quantile",
+    "repair_numeric_only": true,
+    "drop_bank_duration": true
+  },
+  "source_sha256": {
+    "code/05_run_revision.py": "3db455fd492de9341674c8608a34d2c078b6c3c1eed73da1a97ed177fd172b7c",
+    "code/fairness_metrics.py": "eedcc4723e07faf34675543dce1ecb6d9d77d975b9ca047c3d09298622885018",
+    "code/pipeline/__init__.py": "5f70305991cdfb530154681e9dbe10f3f45c6fa9a0c4f8d2a914d07eb50f3029",
+    "code/pipeline/config.py": "2d4cdf4ba4aafc3511ca0576cc34518a7b1b3c72bebc73b3092aaea4e952ea74",
+    "code/pipeline/data.py": "dfb6a3734183e70a732bf46fb2ab815e803812e8ab3eec3b5a9dce792954c2b9",
+    "code/pipeline/features.py": "18339327f3a7261028b9d2d09bbf723d1dc064791b1404432a106269a2eb34cc",
+    "code/pipeline/imbalance.py": "e5ba07853eda310bbdb37faa24c6a1ac5bb5f77cd0a7dd70e9df19a0079c92f6",
+    "code/pipeline/impute.py": "71058229d11fc49724c57dc2ed50c98a2256e1dced150aae042838a2f9933e99",
+    "code/pipeline/intervention.py": "101257caa4d30683d74d11361a268f5a71905230ebe6209858b55fdc6bf746e6",
+    "code/pipeline/metrics.py": "145f890353aa6d94582a1494b82d1a300dde2be34cd5d08fffb2ae2006f19652",
+    "code/pipeline/missing.py": "7f5430159b94f4a4c9e633d93a6209b5d8fa531228afbddf81c34cf620d23759",
+    "code/pipeline/model.py": "46d04146a94921fa592c693e029e24dd39e9ef6ef3fcb3c74b79f527046472ba",
+    "code/pipeline/run_cell.py": "43edc7d922009e65dc94c19463f52f56ab4b463a752263784f3f4c57f4d27edf"
+  },
+  "data_sha256": {
+    "adult/adult.data": "5b00264637dbfec36bdeaab5676b0b309ff9eb788d63554ca0a249491c86603d",
+    "german/german.data": "b21f3d81db8071257d5ff1deaeba1fd4303b62712e6fcc9715c7a86202cb5871",
+    "bank/bank-additional-full.csv": "74adfc578bf77a7ff4bb1ba4a9f8709d9e3c6907342959c2c8416847e0afb4d8",
+    "diabetes/diabetic_data.csv": "0689e7ec031237dc63031b938805c48377748761a3b26acab621567afa24df97",
+    "compas/compas-scores-two-years.csv": "c451db85908b2f7fef1d83203bedf6b71ecda0d5af468d82ae62178f91d0cc7d"
+  },
+  "packages": {
+    "numpy": "2.2.4",
+    "pandas": "3.0.6",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1",
+    "lightgbm": "4.7.0",
+    "aif360": "0.6.1",
+    "BlackBoxAuditing": "0.1.54"
+  },
+  "requirements_sha256": "2c4b4c895b741753eab6da4dd86e846b6655cde61e39b59ba2f793101c0ce063",
+  "natural_missing": false,
+  "started_utc": "2026-10-21T08:37:36.659079+00:00",
+  "python": "3.13.15 (tags/v3.13.15:4061bc4, Aug  5 2026, 13:05:39) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "logical_cpus": 16,
+  "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+  "jobs": 1,
+  "command": [
+    "code/05_run_revision.py",
+    "--jobs",
+    "1",
+    "--seeds",
+    "20",
+    "21",
+    "22",
+    "23",
+    "24",
+    "--a",
+    "A1",
+    "--resample-variant",
+    "random_over",
+    "--out",
+    "results/revised/random_over.csv",
+    "--resume"
+  ],
+  "expected_rows": 900,
+  "wall_time_seconds": 1032.8891779999976,
+  "status": "complete",
+  "finished_utc": "2026-10-21T08:54:49.606484+00:00",
+  "rows": 900,
+  "successful_rows": 900,
+  "failed_rows": 0,
+  "output_sha256": "8f41b86e6a1b950d5578b676d19da2ffefaf96b5a62dd8852200e64cb726c7a5"
+}

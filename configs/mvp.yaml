@@ -26,7 +26,7 @@ c_levels: [C1, C2, C3]        # C1=无干预, C2=Reweighing, C3=DIR
 
 # 模型与随机种子
 models: [LR, LGBM]
-seeds: [0, 1, 2]
+seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
 # 数值参数
 missing_rate: 0.30            # 统一注入缺失率
@@ -45,4 +45,9 @@ max_cardinality: 20
 use_natural_missing: false
 
 # 输出
-out_csv: "results/full_results.csv"
+out_csv: "results/revised/main.csv"
+protocol_version: "revision_v2"
+resample_variant: "within_group_smote"
+repair_variant: "train_quantile"
+repair_numeric_only: true
+drop_bank_duration: true

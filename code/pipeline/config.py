@@ -40,15 +40,15 @@ A_LEVELS: tuple[str, ...] = ("A1", "A2", "A3")          # 插补
 B_LEVELS: tuple[str, ...] = ("B1", "B2", "B3")          # 不平衡
 C_LEVELS: tuple[str, ...] = ("C1", "C2", "C3")          # 公平性干预
 MODELS: tuple[str, ...] = ("LR", "LGBM")
-SEEDS: tuple[int, ...] = (0, 1, 2)
+SEEDS: tuple[int, ...] = tuple(range(20))
 
 MECHANISM_TO_NAME: dict[str, str] = {"M1": "MCAR", "M2": "MAR"}
 
 FACTOR_DESC: dict[str, dict[str, str]] = {
-    "A": {"A1": "均值插补", "A2": "MICE 多重插补", "A3": "KNN 插补"},
-    "B": {"B1": "无处理", "B2": "类别权重", "B3": "SMOTE"},
+    "A": {"A1": "均值插补", "A2": "迭代多变量单次插补", "A3": "KNN 插补"},
+    "B": {"B1": "无处理", "B2": "类别权重", "B3": "群体内 SMOTE"},
     "C": {"C1": "无干预", "C2": "样本再加权(Reweighing)",
-          "C3": "特征去相关(DisparateImpactRemover)"},
+          "C3": "训练拟合的数值边际分位数修复"},
     "M": {"M1": "MCAR", "M2": "MAR"},
 }
 
@@ -71,7 +71,12 @@ class Config:
     categorical_missing: str = "as_category"   # 分类列缺失处理：as_category / mode
     max_cardinality: int = 20           # 分类列按训练集频次保留的最大取值数（Gate 2b）
     use_natural_missing: bool = False   # True 时跳过节 3 规则 7 的「置零」步骤
-    out_csv: str = "results/full_results.csv"
+    out_csv: str = "results/revised/main.csv"
+    protocol_version: str = "revision_v2"
+    resample_variant: str = "within_group_smote"
+    repair_variant: str = "train_quantile"
+    repair_numeric_only: bool = True
+    drop_bank_duration: bool = True
 
     # ---------------- 校验与构造 ----------------
     def __post_init__(self) -> None:
@@ -81,6 +86,12 @@ class Config:
             raise ValueError("missing_rate 须在 (0,1) 内")
         if not 0.0 < self.test_size < 1.0:
             raise ValueError("test_size 须在 (0,1) 内")
+        if len(set(self.seeds)) != len(self.seeds) or not self.seeds:
+            raise ValueError("seeds must be nonempty and unique")
+        if self.resample_variant not in ("within_group_smote", "random_over"):
+            raise ValueError("Unsupported resample_variant")
+        if self.repair_variant not in ("train_quantile", "train_quantile_reference", "transductive_dir"):
+            raise ValueError("Unsupported repair_variant")
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "Config":
@@ -129,21 +140,21 @@ class Config:
 # ---------------------------------------------------------------------------
 def _self_test() -> None:
     cfg = Config()
-    assert cfg.n_combos() == 1620, cfg.n_combos()
+    assert cfg.n_combos() == 10800, cfg.n_combos()
     n_pre = (len(cfg.datasets) * len(cfg.mechanisms) * len(cfg.a_levels)
              * len(cfg.b_levels) * len(cfg.c_levels) * len(cfg.seeds))
-    assert n_pre == 810, n_pre
+    assert n_pre == 5400, n_pre
     combos = list(cfg.iter_combos())
-    assert len(combos) == 1620
-    assert len({tuple(sorted(d.items())) for d in combos}) == 1620, "组合存在重复"
+    assert len(combos) == 10800
+    assert len({tuple(sorted(d.items())) for d in combos}) == 10800, "组合存在重复"
     # 相对路径可被解析到 ROOT 且不含绝对前缀
     assert not Path(cfg.out_csv).is_absolute()
-    assert cfg.out_path() == ROOT / "results" / "full_results.csv"
+    assert cfg.out_path() == ROOT / "results" / "revised" / "main.csv"
     assert str(ROOT).endswith("T3-预处理管线公平性")
     # YAML 往返一致性
     if DEFAULT_CONFIG.exists():
         cfg_yaml = Config.from_yaml(DEFAULT_CONFIG)
-        assert cfg_yaml.n_combos() == 1620
+        assert cfg_yaml.n_combos() == 10800
         assert cfg_yaml.a_levels == A_LEVELS
     print(f"config 自检通过：{cfg.n_combos()} 个单元格组合，"
           f"其中预处理 {n_pre} 次、训练-评估 {cfg.n_combos()} 次")
