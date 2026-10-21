@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this package, please cite the accompanying manuscript."
-title: "Preprocessing Factorial Fairness: replication package"
+title: "Interactions among Imputation, Class-Imbalance Treatment and Fairness Interventions: replication package"
 type: software
 authors:
   - family-names: Lu
