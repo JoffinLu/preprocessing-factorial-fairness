@@ -1,0 +1,36 @@
+\begin{table}[tb]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Complete comparison family: every method, dataset and missingness mechanism, with means $\pm$ half-widths of 95\% $t$ intervals over blocks. The reference arm is A1/B1/C1 and uses blocks 0--2 (three runs per mechanism); the comparison arms use blocks 0--4 (five runs per mechanism). DP, EO and AUC are computed over all original audit groups, following the main grid. AIM uses 5{,}000 training rows for Adult and Diabetes because its proximity matrix grows with the square of the sample size. Full intervals are in the released result tables.}\label{tab:comparison-full}
+\begin{tabular}{@{}lllccc@{}}
+\toprule
+Dataset & Mechanism & Method & AUC & DP & EO\\
+\midrule
+Adult     & MCAR & Reference            & 0.878 $\pm$ 0.003 & 0.154 $\pm$ 0.026 & 0.090 $\pm$ 0.116 \\
+Adult     & MCAR & APW                  & 0.874 $\pm$ 0.001 & 0.059 $\pm$ 0.010 & 0.031 $\pm$ 0.026 \\
+Adult     & MCAR & TabFairGDT           & 0.894 $\pm$ 0.001 & 0.111 $\pm$ 0.025 & 0.084 $\pm$ 0.071 \\
+Adult     & MCAR & AIM                  & 0.867 $\pm$ 0.004 & 0.171 $\pm$ 0.020 & 0.188 $\pm$ 0.087 \\
+Adult     & MAR  & Reference            & 0.872 $\pm$ 0.010 & 0.140 $\pm$ 0.014 & 0.041 $\pm$ 0.126 \\
+Adult     & MAR  & APW                  & 0.866 $\pm$ 0.005 & 0.048 $\pm$ 0.012 & 0.050 $\pm$ 0.060 \\
+Adult     & MAR  & TabFairGDT           & 0.888 $\pm$ 0.009 & 0.115 $\pm$ 0.028 & 0.086 $\pm$ 0.059 \\
+Adult     & MAR  & AIM                  & 0.861 $\pm$ 0.013 & 0.166 $\pm$ 0.015 & 0.121 $\pm$ 0.091 \\
+\midrule
+COMPAS    & MCAR & Reference            & 0.726 $\pm$ 0.018 & 0.266 $\pm$ 0.093 & 0.287 $\pm$ 0.222 \\
+COMPAS    & MCAR & APW                  & 0.643 $\pm$ 0.042 & 0.136 $\pm$ 0.112 & 0.183 $\pm$ 0.144 \\
+COMPAS    & MCAR & TabFairGDT           & 0.748 $\pm$ 0.006 & 0.321 $\pm$ 0.045 & 0.319 $\pm$ 0.055 \\
+COMPAS    & MCAR & AIM                  & 0.727 $\pm$ 0.010 & 0.318 $\pm$ 0.046 & 0.334 $\pm$ 0.094 \\
+COMPAS    & MAR  & Reference            & 0.727 $\pm$ 0.030 & 0.286 $\pm$ 0.115 & 0.287 $\pm$ 0.114 \\
+COMPAS    & MAR  & APW                  & 0.659 $\pm$ 0.046 & 0.139 $\pm$ 0.166 & 0.144 $\pm$ 0.175 \\
+COMPAS    & MAR  & TabFairGDT           & 0.747 $\pm$ 0.006 & 0.322 $\pm$ 0.063 & 0.321 $\pm$ 0.064 \\
+COMPAS    & MAR  & AIM                  & 0.727 $\pm$ 0.010 & 0.337 $\pm$ 0.039 & 0.352 $\pm$ 0.036 \\
+\midrule
+Diabetes  & MCAR & Reference            & 0.596 $\pm$ 0.012 & 0.003 $\pm$ 0.001 & 0.011 $\pm$ 0.007 \\
+Diabetes  & MCAR & APW                  & 0.596 $\pm$ 0.010 & 0.007 $\pm$ 0.009 & 0.029 $\pm$ 0.021 \\
+Diabetes  & MCAR & TabFairGDT           & 0.587 $\pm$ 0.012 & 0.010 $\pm$ 0.005 & 0.041 $\pm$ 0.010 \\
+Diabetes  & MCAR & AIM                  & 0.570 $\pm$ 0.016 & 0.007 $\pm$ 0.003 & 0.030 $\pm$ 0.015 \\
+Diabetes  & MAR  & Reference            & 0.581 $\pm$ 0.014 & 0.002 $\pm$ 0.006 & 0.005 $\pm$ 0.011 \\
+Diabetes  & MAR  & APW                  & 0.583 $\pm$ 0.007 & 0.004 $\pm$ 0.008 & 0.013 $\pm$ 0.019 \\
+Diabetes  & MAR  & TabFairGDT           & 0.586 $\pm$ 0.013 & 0.015 $\pm$ 0.008 & 0.047 $\pm$ 0.034 \\
+Diabetes  & MAR  & AIM                  & 0.568 $\pm$ 0.014 & 0.010 $\pm$ 0.005 & 0.052 $\pm$ 0.065 \\
+\bottomrule\end{tabular}
+\end{table}

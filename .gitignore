@@ -13,3 +13,7 @@ data/raw/
 *.log
 .DS_Store
 .Rhistory
+
+# Figure QA previews (regenerate locally; PDFs are tracked)
+results/revised/figures/*_preview.png
+results/revised/figures/preview_*.png

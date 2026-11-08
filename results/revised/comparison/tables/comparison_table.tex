@@ -1,0 +1,15 @@
+\begin{table}[tb]
+\centering\small
+\caption{Recent fairness methods compared with the reference pipeline. Cells are means over blocks 0--2 and both missingness mechanisms, so every row rests on six runs per dataset. DP is computed over all original audit groups; AUC is the area under the ROC curve. AIM is trained on 5{,}000 rows for Adult and Diabetes (Sect.~\ref{sec:res-comparison}). Interval half-widths and the five-block means are in Appendix~\ref{app:comparison}.}\label{tab:comparison}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+& \multicolumn{2}{c}{Adult} & \multicolumn{2}{c}{COMPAS} & \multicolumn{2}{c}{Diabetes}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Method & DP & AUC & DP & AUC & DP & AUC\\
+\midrule
+Reference (A1/B1/C1)       & 0.147 & 0.875 & 0.276 & 0.726 & 0.002 & 0.588 \\
+APW (preprint)             & 0.056 & 0.870 & 0.126 & 0.653 & 0.007 & 0.587 \\
+TabFairGDT (ICDM 2025)     & 0.114 & 0.892 & 0.315 & 0.748 & 0.012 & 0.584 \\
+AIM (KDD 2024)             & 0.170 & 0.866 & 0.335 & 0.728 & 0.009 & 0.569 \\
+\bottomrule\end{tabular}
+\end{table}

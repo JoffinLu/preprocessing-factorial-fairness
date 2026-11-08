@@ -1,6 +1,6 @@
 # Preprocessing Factorial Fairness
 
-Replication package for *Interactions among Imputation, Class-Imbalance Treatment and Fairness Interventions: A Controlled Factorial Study* (manuscript in preparation, Knowledge and Information Systems).
+Replication package for *Do Fairness Interventions Compose with Preprocessing? A Controlled Factorial Study of Stage Interactions* (manuscript under review, Journal of Experimental & Theoretical Artificial Intelligence).
 
 The package regenerates every number reported in the paper from a fixed configuration. It contains the preprocessing pipeline, the factorial runner, the paired analysis, the verification script, the complete result tables and the generated manuscript assets.
 
@@ -41,8 +41,11 @@ code/
   fairness_metrics.py          metric implementations
   pipeline/                    data, missingness, imputation, imbalance,
                                intervention, model, metrics, run_cell
+  comparison/                  AIM/TabFairGDT/APW comparison arm
+  figures/                     revision figure scripts
 configs/mvp.yaml               frozen configuration
 results/revised/               main and supplementary runs, manifests, statistics
+results/revised/comparison/    comparison CSV, manifest, summary and manuscript tables
 environment/                   full development-environment freeze
 reproduce.ps1                  one-command reproduction
 ```
@@ -76,6 +79,27 @@ Reuse the archived main results, recompute statistics and run the sampled replay
 
 Supplementary arms (10% and 50% missingness, random oversampling, fixed repair reference, independent seeds 20--24, transductive DIR) are driven by `revision/run_supplements.ps1` in the manuscript workspace; the archived outputs are included under `results/revised/` so the reported checks can be recomputed without rerunning them.
 
+## Comparison arm
+
+The revision adds a 90-run comparison family in which the C stage is replaced by AIM (KDD 2024), TabFairGDT (ICDM 2025) or adaptive priority reweighing (APW, arXiv:2309.08375). The arms cover Adult, COMPAS and Diabetes under MCAR and MAR at 30% missingness, on blocks 0--4, with published defaults and no tuning. Every arm uses the same splits, masks and A1 reference imputation as the main grid.
+
+Two implementation constraints are recorded rather than corrected. AIM builds a full proximity matrix, so Adult and Diabetes are reduced to 5,000 stratified training rows. APW has no finite fixed point when a group receives no positive prediction, so its multipliers are clipped to $[10^{-3}, 10^{3}]$ and renormalised each epoch.
+
+```powershell
+python code/comparison/run_comparison.py --out results/revised/comparison/comparison.csv
+```
+
+The archived outputs are `results/revised/comparison/comparison.csv`, `comparison.manifest.json` and `comparison_summary.csv`. The manuscript tables are under `results/revised/comparison/tables/`.
+
+## Revision figures
+
+```powershell
+python code/figures/make_fig4_ridgeline.py
+python code/figures/make_fig5_tradeoff.py
+```
+
+Both scripts read the archived statistics under `results/revised/stats/` and write vector PDFs and PNG previews to `results/revised/figures/`.
+
 ## Expected output
 
 | File | Expected content |
@@ -87,6 +111,8 @@ Supplementary arms (10% and 50% missingness, random oversampling, fixed repair r
 | `results/revised/stats/cell_means.csv` | cell means for every treatment combination |
 | `results/revised/stats/main_effects.csv` | marginal means for every factor level |
 | `results/revised/stats/summary.json` | inference target, families, seeds, limitations |
+| `results/revised/comparison/comparison.csv` | 90 comparison runs, `status` = `ok` for every row |
+| `results/revised/comparison/comparison.manifest.json` | methods, datasets, mechanisms, seeds, timing |
 | `results/revised/reproduction_check.json` | 10/10 sampled replay report |
 
 Reproduction is deterministic: all randomness derives from the block seed, LightGBM runs without subsampling on one thread, and `06_verify_revision.py` replays ten representative treatments at absolute tolerance $10^{-12}$.
@@ -115,7 +141,7 @@ Reproduction is deterministic: all randomness derives from the block seed, Light
 
 If you use this package, please cite the manuscript:
 
-> Lu C (2026) Interactions among imputation, class-imbalance treatment and fairness interventions: a controlled factorial study. Manuscript in preparation, Knowledge and Information Systems.
+> Lu C (2026) Do fairness interventions compose with preprocessing? A controlled factorial study of stage interactions. Manuscript under review, Journal of Experimental & Theoretical Artificial Intelligence.
 
 A machine-readable record is provided in `CITATION.cff`.
 

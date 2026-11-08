@@ -1,0 +1,87 @@
+{
+  "protocol": "comparison arm v1.1",
+  "code": {
+    "runner": "code/comparison/run_comparison.py",
+    "adapters": [
+      "code/comparison/apw_adapter.py",
+      "code/comparison/tabfairgdt_adapter.py",
+      "code/comparison/aim_adapter.py"
+    ],
+    "third_party": {
+      "AIM": "03845471ab5580836aae61c7c388d73357d99304",
+      "TabFairGDT": "tabfairgdt==0.1.1 (PyPI)",
+      "APW": "807d4b0552a020acc391591cbef7fc10102d9b8e"
+    }
+  },
+  "methods": [
+    "APW",
+    "TabFairGDT",
+    "AIM"
+  ],
+  "datasets": [
+    "adult",
+    "compas",
+    "diabetes"
+  ],
+  "mechanisms": {
+    "M1": "MCAR 30%",
+    "M2": "MAR 30%"
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "run_time": "2026-11-05 18:28–18:51",
+  "elapsed_min": 22.8,
+  "total_units": 90,
+  "n_ok": 90,
+  "n_err": 0,
+  "failures": [],
+  "warnings": {
+    "convergence_warning_cells": 10,
+    "convergence_warning_scope": "TabFairGDT x Adult x (M1,M2): all 10 cells; LR max_iter=10000 did not converge",
+    "performance_warning_lines": 99,
+    "performance_warning_scope": "tabfairgdt internal DataFrame fragmentation warnings (performance only; results unaffected)"
+  },
+  "apw_stability": {
+    "capped_cells": 7,
+    "capped_scope": [
+      "compas/M1",
+      "compas/M2"
+    ],
+    "clip_epochs_range": [
+      95,
+      150
+    ],
+    "note": "Multiplier clipping triggered in 7/10 COMPAS cells; zero triggers on the other datasets"
+  },
+  "adaptation_costs": {
+    "aim_downsampling": {
+      "adult": "22792→5000",
+      "diabetes": "21000→5000",
+      "compas": "4320 (full)"
+    },
+    "missing_handling": "All arms: inject missingness -> A1 imputation -> method -> model",
+    "fairness_evaluation": "Primary: original audit groups; secondary: binary projection (*_bin)"
+  },
+  "comparability": {
+    "main_table_seeds": [
+      0,
+      1,
+      2
+    ],
+    "seed_overlap": [
+      0,
+      1,
+      2
+    ],
+    "note": "Only seeds 0-2 overlap with the main-table LR reference; seeds 3-4 are used for the comparison arms' own intervals"
+  },
+  "outputs": {
+    "raw": "results/revised/comparison/comparison.csv",
+    "summary": "results/revised/comparison/comparison_summary.csv"
+  }
+}

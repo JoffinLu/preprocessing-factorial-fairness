@@ -17,6 +17,8 @@ imbalanced-learn==0.14.2
 aif360==0.6.1
 BlackBoxAuditing==0.1.54
 fairlearn==0.15.0
+# Comparison arm only (TabFairGDT, ICDM 2025)
+tabfairgdt==0.1.1
 
 # --- 统计推断 ---
 statsmodels==0.15.0
